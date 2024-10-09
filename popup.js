@@ -5,8 +5,6 @@ document.getElementById('activate').addEventListener('click', () => {
                 target: { tabId: tabs[0].id },
                 files: ['content-script.js']
             });
-        } else {
-            alert("Please open a YouTube video to use the Timestamp Tool.");
         }
     });
 });
