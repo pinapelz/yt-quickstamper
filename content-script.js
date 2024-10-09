@@ -1,4 +1,4 @@
-(function() {
+(function () {
     'use strict';
     if (!document.querySelector("#ytls-pane")) {
         var pane = document.createElement("div");
@@ -18,7 +18,7 @@
 
         const storedOffset = localStorage.getItem('offset');
         offset = storedOffset !== null ? parseInt(storedOffset) : 5;
-        
+
         browser.runtime.onMessage.addListener((message) => {
             if (message.type === 'SET_OFFSET') {
                 offset = message.offset;
@@ -61,7 +61,7 @@
             try {
                 var time = Math.floor(document.querySelector("video").duration);
                 updateStamp(nowa, time)
-            } catch (e) {}
+            } catch (e) { }
             nowid = requestAnimationFrame(watchTime)
         }
 
@@ -140,7 +140,7 @@
             var toast = document.getElementById("ytls-toast");
             toast.innerText = message;
             toast.className = "show";
-            setTimeout(function() {
+            setTimeout(function () {
                 toast.className = toast.className.replace("show", "");
             }, 1500);
         }
