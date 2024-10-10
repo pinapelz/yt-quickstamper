@@ -1,5 +1,5 @@
 (function () {
-    'use strict';
+    "use strict";
     if (!document.querySelector("#ytls-pane")) {
         var pane = document.createElement("div");
         var exit = document.createElement("span");
@@ -16,13 +16,13 @@
         var offset = 5;
         var copyMode = 0;
 
-        const storedOffset = localStorage.getItem('offset');
+        const storedOffset = localStorage.getItem("offset");
         offset = storedOffset !== null ? parseInt(storedOffset) : 5;
 
         browser.runtime.onMessage.addListener((message) => {
-            if (message.type === 'SET_OFFSET') {
+            if (message.type === "SET_OFFSET") {
                 offset = message.offset;
-                localStorage.setItem('offset', offset);
+                localStorage.setItem("offset", offset);
             }
         });
 
@@ -30,20 +30,25 @@
             if (confirm("Close timestamp tool?")) {
                 pane.remove();
                 cancelAnimationFrame(nowid);
-                window.removeEventListener("beforeunload", warn)
+                window.removeEventListener("beforeunload", warn);
             }
         }
 
         function updateStamp(stamp, time) {
             stamp.innerHTML = formatTime(time);
             stamp.dataset.time = time;
-            stamp.href = "https://youtu.be/" + location.search.split(/.+v=|&/)[1] + "?t=" + time
+            stamp.href =
+                "https://youtu.be/" +
+                location.search.split(/.+v=|&/)[1] +
+                "?t=" +
+                time;
         }
 
         function clickStamp(e) {
             if (e.target.dataset.time) {
                 e.preventDefault();
-                document.querySelector("video").currentTime = e.target.dataset.time
+                document.querySelector("video").currentTime =
+                    e.target.dataset.time;
             } else if (e.target.classList.contains("remove-timestamp")) {
                 e.preventDefault();
                 var li = e.target.parentElement;
@@ -52,25 +57,27 @@
                 e.preventDefault();
                 var li = e.target.parentElement;
                 var a = li.children[3];
-                var time = parseInt(a.dataset.time) + parseInt(e.target.dataset.increment);
-                updateStamp(a, time)
+                var time =
+                    parseInt(a.dataset.time) +
+                    parseInt(e.target.dataset.increment);
+                updateStamp(a, time);
             }
         }
 
         function watchTime() {
             try {
                 var time = Math.floor(document.querySelector("video").duration);
-                updateStamp(nowa, time)
-            } catch (e) { }
-            nowid = requestAnimationFrame(watchTime)
+                updateStamp(nowa, time);
+            } catch (e) {}
+            nowid = requestAnimationFrame(watchTime);
         }
 
         function unformatTime(stamp) {
-            var hms = stamp.split(":").map(e => parseInt(e));
+            var hms = stamp.split(":").map((e) => parseInt(e));
             if (hms.length < 3) {
-                return 60 * hms[0] + hms[1]
+                return 60 * hms[0] + hms[1];
             }
-            return 3600 * hms[0] + 60 * hms[1] + hms[2]
+            return 3600 * hms[0] + 60 * hms[1] + hms[2];
         }
 
         function newLi(time) {
@@ -97,7 +104,7 @@
             li.appendChild(a);
             li.appendChild(text);
             list.appendChild(li);
-            return text
+            return text;
         }
 
         function pasteList() {
@@ -112,23 +119,32 @@
                 var time = unformatTime(stamp);
                 var note = line.slice(stamp.length + 1);
                 var text = newLi(time, note);
-                text.value = note
+                text.value = note;
             }
-            list.appendChild(nowli)
+            list.appendChild(nowli);
         }
 
         function formatTime(time) {
             var h = Math.floor(time / 3600);
             var m = Math.floor(time / 60) % 60;
             var s = Math.floor(time) % 60;
-            return (h ? (h + ":" + String(m).padStart(2, 0)) : m) + ":" + String(s).padStart(2, 0)
+            return (
+                (h ? h + ":" + String(m).padStart(2, 0) : m) +
+                ":" +
+                String(s).padStart(2, 0)
+            );
         }
 
         function addStamp() {
-            var time = Math.max(0, Math.floor(document.querySelector("video").currentTime - offset));
+            var time = Math.max(
+                0,
+                Math.floor(
+                    document.querySelector("video").currentTime - offset,
+                ),
+            );
             var text = newLi(time);
             list.appendChild(nowli);
-            text.focus()
+            text.focus();
         }
 
         function resetCopier() {
@@ -145,7 +161,6 @@
             }, 1500);
         }
 
-
         function copyList() {
             var string = "";
             if (copyMode === 0) {
@@ -156,7 +171,7 @@
                     var note = list.children[i].querySelector("input").value;
                     string += (i > 0 ? "\n" : "") + (stamp + " " + note).trim();
                 }
-                showToast("Copied YouTube Linked Timestamps");
+                showToast("Copied Text Timestamps");
             } else if (copyMode === 1) {
                 copyMode = 2;
                 copier.innerHTML = "Copy Markdown";
@@ -165,24 +180,26 @@
                     var note = list.children[i].querySelector("input").value;
                     string += (i > 0 ? "\n" : "") + (note + " " + stamp).trim();
                 }
-                showToast("Copied Markdown Timestamps");
-            } else { // if (firstCopy === 2)
+                showToast("Copied YouTube Linked Timestamps");
+            } else {
                 resetCopier();
                 for (var i = 0; i < list.children.length - 1; i++) {
                     var stamp = list.children[i].querySelector("a").href;
                     var note = list.children[i].querySelector("input").value;
-                    string += (i > 0 ? "\n" : "") + `- [${note}](${stamp})`.trim();
+                    string +=
+                        (i > 0 ? "\n" : "") + `- [${note}](${stamp})`.trim();
                 }
-                showToast("Copied Text Timestamps");
+                showToast("Copied Markdown Timestamps");
             }
             box.value = string;
             box.select();
-            navigator.clipboard.writeText(string)
+            navigator.clipboard
+                .writeText(string)
                 .then(() => {
-                    console.log('Text copied to clipboard');
+                    console.log("Text copied to clipboard");
                 })
-                .catch(err => {
-                    console.error('Error in copying text: ', err);
+                .catch((err) => {
+                    console.error("Error in copying text: ", err);
                 });
         }
 
@@ -190,14 +207,13 @@
         toast.id = "ytls-toast";
         document.body.appendChild(toast);
 
-
         function warn(e) {
             e.preventDefault();
             e.returnValue = "Close timestamp tool?";
-            return e.returnValue
+            return e.returnValue;
         }
 
-        list.style.maxHeight = "10em"
+        list.style.maxHeight = "10em";
         list.style.overflowY = "auto";
 
         pane.id = "ytls-pane";
@@ -235,6 +251,6 @@
         buttons.appendChild(copier);
         pane.appendChild(buttons);
         document.body.appendChild(pane);
-        box.focus()
+        box.focus();
     }
 })();
