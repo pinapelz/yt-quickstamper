@@ -9,3 +9,6 @@ Based on [Krazete's ytlivestamper bookmarklet](https://github.com/Krazete/bookma
 - Adjustable offset to add context to timestamps
 
 [![Screenshot-20241008-005545.png](https://i.postimg.cc/DZGp23TQ/Screenshot-20241008-005545.png)]
+
+# Installation
+Please follow the instructions in the [Releases](https://github.com/pinapelz/yt-quickstamper/releases) section
