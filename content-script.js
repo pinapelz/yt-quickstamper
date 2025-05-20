@@ -16,6 +16,10 @@
         var copyMode = 0;
         var videoId = location.search.split(/.+v=|&/)[1] || "";
 
+        // Section state and toggle button
+        var sectionState = "normal"; // 'normal' or 'in-section'
+        var sectionBtn = document.createElement("button");
+
         const storedOffset = localStorage.getItem("offset");
         const storedAutoSave = localStorage.getItem("autosave");
         var offset = storedOffset !== null ? parseInt(storedOffset) : 5;
@@ -34,7 +38,7 @@
             }
         });
 
-        let isLoaded = false; // Flag to track if timestamps are loaded
+        let isLoaded = false;
 
         function closePane() {
             if (confirm("Close timestamp tool?")) {
@@ -60,13 +64,13 @@
                 e.preventDefault();
                 var li = e.target.parentElement;
                 li.remove();
+                fixSectionMarkers();
                 saveTimestamps();
             } else if (e.target.dataset.increment) {
                 e.preventDefault();
                 var li = e.target.parentElement;
                 var a = li.children[3];
-                var time =
-                    parseInt(a.dataset.time) + parseInt(e.target.dataset.increment);
+                var time = parseInt(a.dataset.time) + parseInt(e.target.dataset.increment);
                 updateStamp(a, time);
                 saveTimestamps();
             }
@@ -88,7 +92,7 @@
             return 3600 * hms[0] + 60 * hms[1] + hms[2];
         }
 
-        function newLi(time) {
+        function newLi(time, sectionMarker = "") {
             var li = document.createElement("li");
             var minus = document.createElement("span");
             var plus = document.createElement("span");
@@ -111,17 +115,51 @@
             li.appendChild(plus);
             li.appendChild(a);
             li.appendChild(text);
+
+            if (sectionMarker) {
+                text.value = sectionMarker + " ";
+            }
+
             list.appendChild(li);
             text.addEventListener("change", saveTimestamps);
             text.addEventListener("blur", saveTimestamps);
 
+            li.dataset.sectionMarker = sectionMarker;
+
             return text;
         }
 
-        function pasteList() {
-            if (!confirm("This will replace the current list. Are you sure?")) {
-                return;
+        function fixSectionMarkers() {
+            const items = Array.from(list.children).slice(0, -1);
+            let group = [];
+            items.forEach(li => {
+                const mark = li.dataset.sectionMarker;
+                if (mark) {
+                    group.push(li);
+                } else {
+                    if (group.length) {
+                        group.forEach((g, i) => {
+                            const want = i === group.length - 1 ? "└" : "├";
+                            g.dataset.sectionMarker = want;
+                            const inp = g.querySelector("input");
+                            inp.value = inp.value.replace(/^[└├]\s?/, want + " ");
+                        });
+                        group = [];
+                    }
+                }
+            });
+            if (group.length) {
+                group.forEach((g, i) => {
+                    const want = i === group.length - 1 ? "└" : "├";
+                    g.dataset.sectionMarker = want;
+                    const inp = g.querySelector("input");
+                    inp.value = inp.value.replace(/^[└├]\s?/, want + " ");
+                });
             }
+        }
+
+        function pasteList() {
+            if (!confirm("This will replace the current list. Are you sure?")) return;
             var lines = box.value.split("\n");
             list.innerHTML = "";
             for (var i = 0; i < lines.length; i++) {
@@ -129,10 +167,21 @@
                 var stamp = line.split(/\s+/, 1)[0];
                 var time = unformatTime(stamp);
                 var note = line.slice(stamp.length + 1);
-                var text = newLi(time, note);
-                text.value = note;
+
+                let sectionMarker = "";
+                if (note.startsWith("└ ")) {
+                    sectionMarker = "└";
+                    note = note.slice(2);
+                } else if (note.startsWith("├ ")) {
+                    sectionMarker = "├";
+                    note = note.slice(2);
+                }
+
+                var text = newLi(time, sectionMarker);
+                text.value = (sectionMarker ? sectionMarker + " " : "") + note;
             }
             list.appendChild(nowli);
+            fixSectionMarkers();
             saveTimestamps();
         }
 
@@ -140,22 +189,34 @@
             var h = Math.floor(time / 3600);
             var m = Math.floor(time / 60) % 60;
             var s = Math.floor(time) % 60;
-            return (
-                (h ? h + ":" + String(m).padStart(2, 0) : m) +
-                ":" +
-                String(s).padStart(2, 0)
-            );
+            return (h ? h + ":" + String(m).padStart(2, 0) : m) + ":" + String(s).padStart(2, 0);
         }
 
         function addStamp() {
-            var time = Math.max(
-                0,
-                Math.floor(document.querySelector("video").currentTime - offset)
-            );
-            var text = newLi(time);
+            var time = Math.max(0, Math.floor(document.querySelector("video").currentTime - offset));
+            let sectionMarker = sectionState === "in-section" ? "├" : "";
+            var text = newLi(time, sectionMarker);
             list.appendChild(nowli);
             text.focus();
+            fixSectionMarkers();
             saveTimestamps();
+        }
+
+        function startSection() {
+            sectionState = "in-section";
+            updateSectionButton();
+            showToast("Section started – next timestamps are indented");
+        }
+
+        function endSection() {
+            fixSectionMarkers();
+            sectionState = "normal";
+            updateSectionButton();
+            showToast("Section ended");
+        }
+
+        function updateSectionButton() {
+            sectionBtn.innerText = sectionState === "normal" ? "Start Section" : "End Section";
         }
 
         function resetCopier() {
@@ -167,9 +228,7 @@
             var toast = document.getElementById("ytls-toast");
             toast.innerText = message;
             toast.className = "show";
-            setTimeout(function () {
-                toast.className = toast.className.replace("show", "");
-            }, 1500);
+            setTimeout(() => toast.className = toast.className.replace("show", ""), 1500);
         }
 
         function copyList() {
@@ -197,21 +256,13 @@
                 for (var i = 0; i < list.children.length - 1; i++) {
                     var stamp = list.children[i].querySelector("a").href;
                     var note = list.children[i].querySelector("input").value;
-                    string +=
-                        (i > 0 ? "\n" : "") + `- [${note}](${stamp})`.trim();
+                    string += (i > 0 ? "\n" : "") + `- [${note}](${stamp})`.trim();
                 }
                 showToast("Copied Markdown Timestamps");
             }
             box.value = string;
             box.select();
-            navigator.clipboard
-                .writeText(string)
-                .then(() => {
-                    console.log("Text copied to clipboard");
-                })
-                .catch((err) => {
-                    console.error("Error in copying text: ", err);
-                });
+            navigator.clipboard.writeText(string).catch(console.error);
         }
 
         function saveTimestamps() {
@@ -221,22 +272,19 @@
                 const li = list.children[i];
                 const a = li.querySelector("a");
                 const note = li.querySelector("input").value;
+                const sectionMarker = li.dataset.sectionMarker || "";
 
                 timestamps.push({
                     time: parseInt(a.dataset.time),
                     note: note,
+                    sectionMarker: sectionMarker
                 });
             }
-
-            localStorage.setItem(
-                `yt-timestamps-${videoId}`,
-                JSON.stringify(timestamps)
-            );
+            localStorage.setItem(`yt-timestamps-${videoId}`, JSON.stringify(timestamps));
         }
 
         function loadTimestamps() {
             if (!videoId) return;
-
             const savedData = localStorage.getItem(`yt-timestamps-${videoId}`);
             if (!savedData) {
                 isLoaded = true;
@@ -245,20 +293,19 @@
 
             try {
                 const timestamps = JSON.parse(savedData);
-                while (list.children.length > 1) {
-                    list.removeChild(list.firstChild);
-                }
+                while (list.children.length > 1) list.removeChild(list.firstChild);
                 timestamps.forEach((item) => {
-                    const text = newLi(item.time);
+                    const text = newLi(item.time, item.sectionMarker || "");
                     text.value = item.note || "";
                 });
                 list.appendChild(nowli);
-
-                isLoaded = true; // Mark as loaded after successful parsing
+                fixSectionMarkers();
+                updateSectionButton();
+                isLoaded = true;
                 showToast("Timestamps loaded");
             } catch (e) {
                 console.error("Error loading timestamps:", e);
-                isLoaded = true; // Mark as loaded even if an error occurs
+                isLoaded = true;
             }
         }
 
@@ -286,6 +333,7 @@
         paster.innerHTML = "Import List";
         adder.innerHTML = "Add Timestamp";
         copier.innerHTML = "Copy List";
+        sectionBtn.innerHTML = "Start Section";
 
         var link = document.createElement("link");
         link.rel = "stylesheet";
@@ -298,6 +346,10 @@
         paster.addEventListener("click", pasteList);
         adder.addEventListener("click", addStamp);
         copier.addEventListener("click", copyList);
+        sectionBtn.addEventListener("click", () => {
+            if (sectionState === "normal") startSection();
+            else endSection();
+        });
         window.addEventListener("beforeunload", warn);
         window.addEventListener("beforeunload", saveTimestamps);
 
@@ -310,15 +362,14 @@
         buttons.appendChild(paster);
         buttons.appendChild(adder);
         buttons.appendChild(copier);
+        buttons.appendChild(sectionBtn);
         pane.appendChild(buttons);
         document.body.appendChild(pane);
         box.focus();
-        paster.disabled = true;
-        adder.disabled = true;
-        copier.disabled = true;
-        loadTimestamps();
         paster.disabled = false;
         adder.disabled = false;
         copier.disabled = false;
+        updateSectionButton();
+        loadTimestamps();
     }
 })();
