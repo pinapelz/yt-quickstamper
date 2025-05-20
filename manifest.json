@@ -1,27 +1,27 @@
 {
-    "manifest_version": 3,
-    "name": "QuickStamper",
-    "version": "1.0",
-    "description": "A tool for generating timestamps on YouTube videos or livestreams",
-    "browser_specific_settings": {
-        "gecko": {
-            "id": "ytquickstamper@pinapelz.com"
-        }
-    },
-    "permissions": ["activeTab", "scripting", "clipboardWrite"],
-    "icons": {
-        "48": "icons/icon.png"
-    },
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "48": "icons/icon.png"
-        }
-    },
-    "web_accessible_resources": [
-        {
-            "resources": ["styles.css"],
-            "matches": ["<all_urls>"]
-        }
-    ]
+  "manifest_version": 3,
+  "name": "QuickStamper",
+  "version": "1.0",
+  "description": "A tool for generating timestamps on YouTube videos or livestreams",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ytquickstamper@pinapelz.com"
+    }
+  },
+  "permissions": ["activeTab", "scripting", "clipboardWrite", "storage"],
+  "icons": {
+    "48": "icons/icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/icon.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["styles.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

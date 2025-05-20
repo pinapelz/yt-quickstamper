@@ -13,21 +13,32 @@
         var paster = document.createElement("button");
         var adder = document.createElement("button");
         var copier = document.createElement("button");
-        var offset = 5;
         var copyMode = 0;
+        var videoId = location.search.split(/.+v=|&/)[1] || "";
 
         const storedOffset = localStorage.getItem("offset");
-        offset = storedOffset !== null ? parseInt(storedOffset) : 5;
+        const storedAutoSave = localStorage.getItem("autosave");
+        var offset = storedOffset !== null ? parseInt(storedOffset) : 5;
+        var autosave = storedAutoSave !== null ? storedAutoSave : true;
 
-        browser.runtime.onMessage.addListener((message) => {
+        const browserAPI = typeof browser !== "undefined" ? browser : chrome;
+
+        browserAPI.runtime.onMessage.addListener((message) => {
             if (message.type === "SET_OFFSET") {
                 offset = message.offset;
                 localStorage.setItem("offset", offset);
             }
+            if (message.type === "SET_AUTOSAVE") {
+                autosave = message.autosave;
+                localStorage.setItem("autosave", autosave);
+            }
         });
+
+        let isLoaded = false; // Flag to track if timestamps are loaded
 
         function closePane() {
             if (confirm("Close timestamp tool?")) {
+                saveTimestamps();
                 pane.remove();
                 cancelAnimationFrame(nowid);
                 window.removeEventListener("beforeunload", warn);
@@ -37,30 +48,27 @@
         function updateStamp(stamp, time) {
             stamp.innerHTML = formatTime(time);
             stamp.dataset.time = time;
-            stamp.href =
-                "https://youtu.be/" +
-                location.search.split(/.+v=|&/)[1] +
-                "?t=" +
-                time;
+            stamp.href = "https://youtu.be/" + videoId + "?t=" + time;
+            saveTimestamps();
         }
 
         function clickStamp(e) {
             if (e.target.dataset.time) {
                 e.preventDefault();
-                document.querySelector("video").currentTime =
-                    e.target.dataset.time;
+                document.querySelector("video").currentTime = e.target.dataset.time;
             } else if (e.target.classList.contains("remove-timestamp")) {
                 e.preventDefault();
                 var li = e.target.parentElement;
                 li.remove();
+                saveTimestamps();
             } else if (e.target.dataset.increment) {
                 e.preventDefault();
                 var li = e.target.parentElement;
                 var a = li.children[3];
                 var time =
-                    parseInt(a.dataset.time) +
-                    parseInt(e.target.dataset.increment);
+                    parseInt(a.dataset.time) + parseInt(e.target.dataset.increment);
                 updateStamp(a, time);
+                saveTimestamps();
             }
         }
 
@@ -104,6 +112,9 @@
             li.appendChild(a);
             li.appendChild(text);
             list.appendChild(li);
+            text.addEventListener("change", saveTimestamps);
+            text.addEventListener("blur", saveTimestamps);
+
             return text;
         }
 
@@ -122,6 +133,7 @@
                 text.value = note;
             }
             list.appendChild(nowli);
+            saveTimestamps();
         }
 
         function formatTime(time) {
@@ -138,13 +150,12 @@
         function addStamp() {
             var time = Math.max(
                 0,
-                Math.floor(
-                    document.querySelector("video").currentTime - offset,
-                ),
+                Math.floor(document.querySelector("video").currentTime - offset)
             );
             var text = newLi(time);
             list.appendChild(nowli);
             text.focus();
+            saveTimestamps();
         }
 
         function resetCopier() {
@@ -203,6 +214,54 @@
                 });
         }
 
+        function saveTimestamps() {
+            if (!isLoaded || !videoId) return;
+            let timestamps = [];
+            for (let i = 0; i < list.children.length - 1; i++) {
+                const li = list.children[i];
+                const a = li.querySelector("a");
+                const note = li.querySelector("input").value;
+
+                timestamps.push({
+                    time: parseInt(a.dataset.time),
+                    note: note,
+                });
+            }
+
+            localStorage.setItem(
+                `yt-timestamps-${videoId}`,
+                JSON.stringify(timestamps)
+            );
+        }
+
+        function loadTimestamps() {
+            if (!videoId) return;
+
+            const savedData = localStorage.getItem(`yt-timestamps-${videoId}`);
+            if (!savedData) {
+                isLoaded = true;
+                return;
+            }
+
+            try {
+                const timestamps = JSON.parse(savedData);
+                while (list.children.length > 1) {
+                    list.removeChild(list.firstChild);
+                }
+                timestamps.forEach((item) => {
+                    const text = newLi(item.time);
+                    text.value = item.note || "";
+                });
+                list.appendChild(nowli);
+
+                isLoaded = true; // Mark as loaded after successful parsing
+                showToast("Timestamps loaded");
+            } catch (e) {
+                console.error("Error loading timestamps:", e);
+                isLoaded = true; // Mark as loaded even if an error occurs
+            }
+        }
+
         var toast = document.createElement("div");
         toast.id = "ytls-toast";
         document.body.appendChild(toast);
@@ -240,6 +299,8 @@
         adder.addEventListener("click", addStamp);
         copier.addEventListener("click", copyList);
         window.addEventListener("beforeunload", warn);
+        window.addEventListener("beforeunload", saveTimestamps);
+
         pane.appendChild(exit);
         nowli.appendChild(nowa);
         nowli.appendChild(nowtext);
@@ -252,5 +313,12 @@
         pane.appendChild(buttons);
         document.body.appendChild(pane);
         box.focus();
+        paster.disabled = true;
+        adder.disabled = true;
+        copier.disabled = true;
+        loadTimestamps();
+        paster.disabled = false;
+        adder.disabled = false;
+        copier.disabled = false;
     }
 })();

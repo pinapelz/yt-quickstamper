@@ -59,11 +59,15 @@
     <button id="activate">Launch Timestamp Tool</button>
     <div>
         <label for="offset">Offset (sec):</label>
-        <input type="number" 
-            id="offset" 
-            value="5"
+        <input type="number"
+            id="offset"
             title="Offset each timestamp by this many seconds, ex. 3 = 3s before each timestamp, -3 = 3s after each timestamp"
         >
+        <label for="autosave">Autosave</label>
+        <input type="checkbox"
+            id="autosave"
+            title="Automatically save timestamps for each video">
+        </input>
     </div>
     <script src="popup.js"></script>
 </body>
