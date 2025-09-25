@@ -14,4 +14,9 @@ Based on [Krazete's ytlivestamper bookmarklet](https://github.com/Krazete/bookma
 [![Screenshot-20241008-005545.png](https://i.postimg.cc/DZGp23TQ/Screenshot-20241008-005545.png)]
 
 # Installation
+## Firefox
+![Mozilla Add-on Version](https://img.shields.io/amo/v/yt-quickstamper)
+
+[Install on Firefox](https://addons.mozilla.org/en-US/firefox/addon/yt-quickstamper/)
+## Chrome
 Please follow the instructions in the [Releases](https://github.com/pinapelz/yt-quickstamper/releases) section
